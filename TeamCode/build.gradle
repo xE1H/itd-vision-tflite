@@ -25,4 +25,8 @@ android {
 
 dependencies {
     implementation project(':FtcRobotController')
+    implementation "org.tensorflow:tensorflow-lite:2.2.0"
+    implementation "org.tensorflow:tensorflow-lite-support:0.4.0"
+    implementation "org.tensorflow:tensorflow-lite-gpu:2.2.0"
+    implementation "org.tensorflow:tensorflow-lite-gpu-delegate-plugin:0.4.0"
 }
