@@ -1,5 +1,6 @@
 package org.firstinspires.ftc.teamcode;
 
+import static org.firstinspires.ftc.teamcode.VisionConfiguration.*;
 import static org.firstinspires.ftc.teamcode.YoloV11VisionProcessorConfig.CONFIDENCE_THRESHOLD;
 import static org.firstinspires.ftc.teamcode.YoloV11VisionProcessorConfig.LABELS;
 import static org.firstinspires.ftc.teamcode.YoloV11VisionProcessorConfig.LABEL_COLORS;
@@ -14,6 +15,8 @@ import android.graphics.Paint;
 import org.firstinspires.ftc.robotcore.internal.camera.calibration.CameraCalibration;
 import org.firstinspires.ftc.vision.VisionProcessor;
 import org.opencv.android.Utils;
+import org.opencv.calib3d.Calib3d;
+import org.opencv.core.CvType;
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 
@@ -24,16 +27,43 @@ public class YoloV11VisionProcessor implements VisionProcessor {
     private List<YoloV11Inference.Detection> detectionList = new ArrayList<>();
     private YoloV11Inference detector;
 
+    private YoloV11VisionPostProcessor postProcessor;
+
+    Mat cameraMatrix = new Mat(3, 3, CvType.CV_64F);
+    Mat distCoeffs = new Mat(1, 5, CvType.CV_64F);
+
     @Override
     public void init(int width, int height, CameraCalibration calibration) {
         detector = new YoloV11Inference(MODEL_FILE_PATH, MODEL_INPUT_SIZE, CONFIDENCE_THRESHOLD, LABELS, Math.max(width, height), Y_OFFSET);
+
+        double[] calibrationData = new double[]{
+                FX, 0, CX,
+                0, FY, CY,
+                0, 0, 1
+        };
+        cameraMatrix.put(0, 0, calibrationData);
+
+        distCoeffs = new Mat(1, 5, CvType.CV_64F);
+        double[] distCoeffData = new double[]{K1, K2, P1, P2, K3};
+        distCoeffs.put(0, 0, distCoeffData);
+    }
+
+    public void setPostProcessor(YoloV11VisionPostProcessor postProcessor) {
+        this.postProcessor = postProcessor;
     }
 
     @Override
     public Object processFrame(Mat frame, long captureTimeNanos) {
+        Mat undistorted = new Mat();
+        Calib3d.undistort(frame, undistorted, cameraMatrix, distCoeffs);
+
         Bitmap bitmap = getBitmap(frame);
 
         detectionList = detector.detect(bitmap);
+
+        if (postProcessor != null) {
+            postProcessor.processDetections(undistorted, detectionList);
+        }
 
         return null;
     }
@@ -53,6 +83,9 @@ public class YoloV11VisionProcessor implements VisionProcessor {
                     detection.y2 * scaleBmpPxToCanvasPx,
                     paint
             );
+        }
+        if (postProcessor != null) {
+            postProcessor.onDrawFrame(canvas, onscreenWidth, onscreenHeight, scaleBmpPxToCanvasPx, scaleCanvasDensity, userContext);
         }
     }
 

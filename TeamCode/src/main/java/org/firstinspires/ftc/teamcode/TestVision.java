@@ -17,6 +17,7 @@ public class TestVision extends LinearOpMode {
     @Override
     public void runOpMode() throws InterruptedException {
         YoloV11VisionProcessor processor = new YoloV11VisionProcessor();
+        processor.setPostProcessor(new CornerDetectionPostProcessor());
 
         VisionPortal portal = new VisionPortal.Builder()
                 .setCamera(hardwareMap.get(WebcamName.class, "Webcam 1"))
